@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Frontend Service (Next.js)
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - forewarn-network
+
+  # Backend Service (Django)
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      - DEBUG=1
+      - DATABASE_URL=postgresql://forewarn_user:forewarn_password@postgres:5432/forewarn_ibf
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,frontend
+    volumes:
+      - ./backend:/app
+    networks:
+      - forewarn-network
+
+  # Database Service (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    container_name: forewarn-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: forewarn_ibf
+      POSTGRES_USER: forewarn_user
+      POSTGRES_PASSWORD: forewarn_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - forewarn-network
+
+  # Optional: Database admin interface
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: forewarn-pgadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@forewarn.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    depends_on:
+      - postgres
+    networks:
+      - forewarn-network
+
+volumes:
+  postgres_data:
+
+networks:
+  forewarn-network:
+    driver: bridge

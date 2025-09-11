@@ -1,41 +1,251 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# FOREWARN IBF Portal - Microservices Architecture
+# Comprehensive .gitignore for Frontend (Next.js) + Backend (Django) + Database (PostgreSQL)
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
+# =============================================================================
+# ENVIRONMENT & SECRETS
+# =============================================================================
+.env*
+**/secrets/
+**/.secrets
+
+# Service-specific environment files (keep examples)
+frontend/.env.local
+backend/.env.local
+backend/.env
+
+# =============================================================================
+# FRONTEND (Next.js / React)
+# =============================================================================
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.*
+
+# Build outputs
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+
+# Runtime data
+frontend/.cache/
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Testing
+frontend/coverage/
+frontend/.nyc_output
+
+# IDE
+frontend/.vscode/
+frontend/.idea/
+
+# =============================================================================
+# BACKEND (Django / Python)
+# =============================================================================
+# Python
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/*.so
+backend/.Python
+backend/build/
+backend/develop-eggs/
+backend/dist/
+backend/downloads/
+backend/eggs/
+backend/.eggs/
+backend/lib/
+backend/lib64/
+backend/parts/
+backend/sdist/
+backend/var/
+backend/wheels/
+backend/share/python-wheels/
+
+# Django
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/media/
+backend/staticfiles/
+backend/static/
+backend/logs/
+backend/*.log
+
+# Virtual environments
+backend/venv/
+backend/env/
+backend/ENV/
+backend/env.bak/
+backend/venv.bak/
+
+# Celery
+backend/celerybeat-schedule
+backend/celerybeat.pid
+
+# Django migrations (keep structure, ignore data)
+backend/**/migrations/0*.py
+!backend/**/migrations/__init__.py
+
+# =============================================================================
+# DATABASE (PostgreSQL)
+# =============================================================================
+# Database dumps and backups
+database/backups/*.sql
+database/backups/*.dump
+database/exports/
+*.sql.gz
+*.dump
+
+# Database data (Docker volumes handle this)
+database/data/
+postgresql-data/
+postgres-data/
+
+# =============================================================================
+# DOCKER & CONTAINERIZATION
+# =============================================================================
+# Docker
+.docker/
+docker-compose.override.yml
+.dockerignore
+
+# Container volumes and data
+volumes/
+data/
+
+# =============================================================================
+# CI/CD & DEPLOYMENT
+# =============================================================================
+# AWS
+.aws/
+*.pem
+
+# Terraform
+infrastructure/*.tfstate
+infrastructure/*.tfstate.*
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl
+
+# Kubernetes
+k8s/secrets/
+*.kubeconfig
+
+# =============================================================================
+# DEVELOPMENT TOOLS
+# =============================================================================
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output
+
+# =============================================================================
+# PACKAGE MANAGERS
+# =============================================================================
+# npm
+node_modules/
+npm-debug.log*
+.npm
+
+# Yarn
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.pnp.*
 
-# testing
-/coverage
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
 
-# next.js
-/.next/
-/out/
+# =============================================================================
+# TEMPORARY & CACHE FILES
+# =============================================================================
+.cache/
+.tmp/
+.temp/
+*.tmp
+*.temp
 
-# production
-/build
-
-# misc
+# OS generated files
 .DS_Store
-*.pem
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# =============================================================================
+# DOCUMENTATION BUILD
+# =============================================================================
+docs/_build/
+docs/_static/
+docs/_templates/
 
-# env files (can opt-in for committing if needed)
-.env*
+# =============================================================================
+# MONITORING & OBSERVABILITY
+# =============================================================================
+# Prometheus
+prometheus-data/
 
-# vercel
-.vercel
+# Grafana
+grafana-data/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# =============================================================================
+# TESTING
+# =============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.coverage.*
+
+# =============================================================================
+# SECURITY SCANNING
+# =============================================================================
+# Snyk
+.snyk
+
+# =============================================================================
+# KEEP THESE IMPORTANT FILES
+# =============================================================================
+# Keep example environment files
+!.env.example
+!frontend/.env.example
+!backend/.env.example
+
+# Keep Docker configurations
+!docker-compose.*.yml
+!Dockerfile*
+
+# Keep documentation
+!README.md
+!docs/
+
+# Keep CI/CD workflows
+!.github/
