@@ -1,168 +1,256 @@
-# Forewarn IBF Portal
+# FOREWARN IBF Portal
 
-A production-ready admin dashboard built with Next.js, designed for managing users and displaying various data insights with role-based access control.
+A production-ready admin dashboard built with modern microservices architecture, featuring containerized services for scalable deployment on AWS EC2 with CI/CD automation.
 
 ## 🎯 Project Overview
 
-This is an admin portal dashboard that provides:
-- **User Management System**: Login, Registration, Password Reset
-- **Role-Based Authorization**: SuperAdmin, Admin, Manager, Normal User roles
-- **Data Dashboard**: Multiple menus with different status views and analytics
-- **Responsive Design**: Built with Tailwind CSS for all screen sizes
+A full-stack admin portal dashboard with complete separation of concerns:
+- **User Management System**: Registration, Authentication, Role Management
+- **Role-Based Authorization**: Dynamic roles (User, Manager, Admin, SuperAdmin)
+- **Data Dashboard**: Analytics and reporting with real-time insights
+- **Microservices Architecture**: Three independent containerized services
+- **Cloud-Native**: Designed for AWS EC2 deployment with auto-scaling
+
+## 🏗️ Three-Container Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│                 │    │                 │    │                 │
+│   Frontend      │    │   Backend       │    │   Database      │
+│   Container     │    │   Container     │    │   Container     │
+│   (Next.js)     │    │   (Django)      │    │  (PostgreSQL)   │
+│                 │    │                 │    │                 │
+│  Port: 3000     │    │  Port: 8000     │    │  Port: 5432     │
+│                 │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────┐
+                    │                 │
+                    │  Docker Network │
+                    │  (forewarn-net) │
+                    │                 │
+                    └─────────────────┘
+```
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 15 with App Router
-- **Backend**: Next.js API Routes + Server Actions
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4 (CSS-based configuration)
-- **UI Components**: Shadcn/ui (headless component library)
-- **Icons**: Lucide React
-- **Linting**: ESLint
-- **Database**: PostgreSQL (recommended) or MySQL
-- **ORM**: Prisma (planned)
-- **Authentication**: NextAuth.js (planned)
-- **Deployment**: Vercel (frontend + backend)
+### **Container 1: Frontend Service**
+- **Framework**: Next.js 15 with App Router & TypeScript
+- **Styling**: Tailwind CSS v4 + Shadcn/ui components
+- **State Management**: Zustand for client state
+- **HTTP Client**: Axios for API communication
+- **Container**: Node.js Alpine image
+
+### **Container 2: Backend Service**
+- **Framework**: Django 5.0 + Django REST Framework
+- **Language**: Python 3.11+
+- **Authentication**: JWT tokens + Role-based permissions
+- **API Documentation**: Django REST Swagger
+- **Container**: Python Alpine image
+
+### **Container 3: Database Service**
+- **Database**: PostgreSQL 15
+- **ORM**: Django ORM with migrations
+- **Extensions**: UUID, full-text search
+- **Container**: PostgreSQL Alpine image
+
+## 🚀 Deployment Architecture (AWS EC2)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     AWS EC2 Instance                     │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │  Frontend   │  │  Backend    │  │  Database   │       │
+│  │  Container  │  │  Container  │  │  Container  │       │
+│  │  :3000      │  │  :8000      │  │  :5432      │       │
+│  └─────────────┘  └─────────────┘  └─────────────┘       │
+│           │               │               │              │
+│           └───────────────┼───────────────┘              │
+│                           │                              │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │            Docker Compose Network                   │ │
+│  └─────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   Load Balancer │
+                    │   (Nginx/ALB)   │
+                    └─────────────────┘
+                              │
+                              ▼
+                         Internet
+```
+
+## 🔄 API Communication Flow
+
+### **Service-to-Service Communication**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          Request Flow Architecture                              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+User Browser ──► Frontend Container ──► Backend Container ──► Database Container
+     │                    │                     │                     │
+     │                    │                     │                     │
+   HTTP/HTTPS          API Calls           ORM Queries          SQL Queries
+  (Port 3000)         (Port 8000)         (Internal)          (Port 5432)
+```
+
+
+### **Deployment Flow**
+```
+Developer Push → GitHub → CI/CD Pipeline → Docker Registry → AWS EC2 → Live Application
+      ↓              ↓            ↓              ↓            ↓           ↓
+   git push      Actions     Build Images    ECR/DockerHub   Pull    Auto Restart
+```
 
 ## 🚀 Development Roadmap
 
-### Phase 1: Foundation ✅
-- [x] Next.js project setup with TypeScript
-- [x] Project structure with App Router
-- [x] Tailwind CSS v4 configuration (CSS-based)
-- [x] Shadcn/ui component library integration
-- [x] Basic header component with responsive design
-- [x] Logo component with FOREWARN IBF branding
+### **Phase 1: Container Setup**
+- [ ] Frontend Dockerfile (Next.js)
+- [ ] Backend Dockerfile (Django)
+- [ ] Database container configuration
+- [ ] Docker Compose for local development
 
-### Phase 2: User Management (In Progress)
-- [ ] Authentication pages (Login, Register, Forgot Password)
-- [ ] User registration flow
-- [ ] Password reset functionality
-- [ ] Form validation and error handling
+### **Phase 2: Service Development**
+- [ ] Django REST API development
+- [ ] Next.js frontend integration
+- [ ] PostgreSQL schema and migrations
+- [ ] Inter-container communication
 
-### Phase 3: Authorization System
-- [ ] Role-based access control
-- [ ] User roles: SuperAdmin, Admin, Manager, Normal User
-- [ ] Protected routes and middleware
-- [ ] Permission-based component rendering
+### **Phase 3: AWS Infrastructure**
+- [ ] EC2 instance setup and configuration
+- [ ] Security groups and networking
+- [ ] Domain and SSL certificate setup
+- [ ] Load balancer configuration
 
-### Phase 4: Dashboard Implementation
-- [ ] Dashboard layout with sidebar navigation
-- [ ] Multiple data views and status pages
-- [ ] Charts and analytics components
-- [ ] Real-time data integration
+### **Phase 4: CI/CD Pipeline**
+- [ ] GitHub Actions workflow setup
+- [ ] Docker image building and pushing
+- [ ] Automated deployment to EC2
+- [ ] Health checks and rollback mechanisms
 
-## 🏃‍♂️ Getting Started
-
-### Prerequisites
-
-- Node.js 18+ 
-- npm, yarn, pnpm, or bun
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd forewarn-ibf-portal
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
+### **Phase 5: Production Optimization**
+- [ ] Container monitoring and logging
+- [ ] Database backup automation
+- [ ] Performance optimization
+- [ ] Security hardening
 
 ## 📁 Project Structure
 
 ```
-src/
-├── app/                    # App Router pages and layouts
-│   ├── layout.tsx         # Root layout with header integration
-│   ├── page.tsx           # Home page with feature cards
-│   ├── globals.css        # Global styles with Tailwind v4 and theme variables
-│   └── favicon.ico        # App icon
-├── components/            # Reusable UI components
-│   ├── layout/           # Layout-specific components
-│   │   ├── Header.tsx    # Main navigation header with Shadcn/ui
-│   │   └── Logo.tsx      # FOREWARN IBF logo component
-│   └── ui/               # Shadcn/ui components
-│       ├── avatar.tsx    # User avatar component
-│       ├── badge.tsx     # Status badge component
-│       ├── button.tsx    # Button component with variants
-│       ├── card.tsx      # Card layout component
-│       ├── dropdown-menu.tsx # Dropdown menu component
-│       ├── input.tsx     # Form input component
-│       ├── sheet.tsx     # Slide-out panel component
-│       └── table.tsx     # Data table component
-├── lib/                  # Utility functions and configurations
-│   └── utils.ts          # Utility functions (clsx, tailwind-merge)
-└── types/                # TypeScript type definitions (planned)
+forewarn-ibf-portal/
+├── frontend/                   # Next.js Container
+│   ├── Dockerfile
+│   ├── src/
+│   └── package.json
+│
+├── backend/                    # Django Container  
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── manage.py
+│
+├── database/                   # PostgreSQL Container
+│   ├── init-scripts/
+│   └── backups/
+│
+├── docker-compose.dev.yml      # Development environment
+├── docker-compose.prod.yml     # Production environment
+│
+├── .github/                    # CI/CD Pipeline
+│   └── workflows/
+│       └── deploy.yml
+│
+├── infrastructure/             # AWS Infrastructure
+│   ├── ec2-setup.sh
+│   ├── nginx.conf
+│   └── security-groups.tf
+│
+└── docs/                       # Documentation
+    ├── deployment.md
+    └── architecture.md
+```
+## �️ Local Development
+
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 18+ (for frontend development)
+- Python 3.9+ (for backend development)
+- Git
+
+### Environment Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/forewarn-ibf-portal.git
+   cd forewarn-ibf-portal
+   ```
+
+2. **Start the development environment**
+   ```bash
+   # Start all containers
+   docker-compose -f docker-compose.dev.yml up -d
+   
+   # View logs
+   docker-compose logs -f
+   ```
+
+3. **Access the applications**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - Database: localhost:5433
+
+### Individual Service Development
+
+**Frontend (Next.js)**
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-### Key Features Implemented
+**Backend (Django)**
+```bash
+cd backend
+pip install -r requirements.txt
+python manage.py runserver
+```
 
-- **Responsive Header**: Navigation with search, notifications, and user menu
-- **Component Library**: Shadcn/ui components with consistent theming
-- **Dark Mode Support**: CSS variables for light/dark theme switching
-- **Modern Styling**: Tailwind CSS v4 with CSS-based configuration
+## 🚢 Production Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### AWS EC2 Setup
 
-## 🎨 Styling & Components
+1. **Launch EC2 instance**
+   - Ubuntu 22.04 LTS
+   - t3.medium or larger
+   - Security groups configured for HTTP/HTTPS
 
-### Tailwind CSS v4
-This project uses the latest Tailwind CSS v4 with **CSS-based configuration**. Unlike previous versions, there's no `tailwind.config.js` file. Instead, configuration is handled through CSS using the `@theme` directive in `globals.css`.
+2. **Instance preparation**
+   ```bash
+   # Install Docker and Docker Compose
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sh get-docker.sh
+   
+   # Setup production environment
+   git clone https://github.com/your-username/forewarn-ibf-portal.git
+   cd forewarn-ibf-portal
+   ```
 
-### Shadcn/ui Integration
-We've successfully integrated Shadcn/ui with Tailwind CSS v4, proving compatibility between these cutting-edge technologies. The component library provides:
-- Consistent design system with CSS variables
-- Accessible components built on Radix UI
-- Full TypeScript support
-- Customizable theming with light/dark mode support
+3. **Deploy with Docker Compose**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
 
-### Available Components
-- Avatar with fallback support
-- Badges for status indicators  
-- Buttons with multiple variants
-- Cards for content layout
-- Dropdown menus with keyboard navigation
-- Form inputs with validation styles
-- Data tables with sorting
-- Slide-out sheets for modals
+### CI/CD Pipeline
 
-## 📚 Learn More
-
-To learn more about the technologies used in this project:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial
-- [Tailwind CSS v4 Documentation](https://tailwindcss.com/docs/v4-beta) - utility-first CSS framework with CSS-based configuration
-- [Shadcn/ui Documentation](https://ui.shadcn.com/) - beautifully designed component library
-- [Lucide React Icons](https://lucide.dev/) - beautiful & consistent icon toolkit
-- [TypeScript Documentation](https://www.typescriptlang.org/docs/) - typed JavaScript
-
-## 🚀 Deployment
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## 📝 Development Notes
-
-This README will be updated as we progress through development phases. Each major feature addition or architectural change will be documented here to maintain project clarity and help with onboarding new team members.
+The GitHub Actions workflow automatically:
+1. Builds Docker images for all services
+2. Pushes images to Docker Hub
+3. Deploys to EC2 via SSH
+4. Runs health checks
+5. Sends deployment notifications
