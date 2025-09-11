@@ -62,7 +62,11 @@ export default function LoginPage() {
     if (!validateForm()) return
 
     try {
-      await login(formData.email, formData.password)
+      const { success, error } = await login(formData.email, formData.password)
+      if (!success) {
+        setErrors({ general: error || 'Login failed. Please try again.' })
+        return
+      }
       // If login successful, redirect to homepage
       router.push('/')
     } catch (error) {
