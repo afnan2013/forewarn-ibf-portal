@@ -1,0 +1,86 @@
+# 🚀 GitHub Actions Workflow for Deploying to AWS Lightsail
+# This workflow automatically deploys your app when you push to main branch
+
+name: Deploy to AWS Lightsail
+
+# 📋 WHEN should this workflow run?
+on:
+  push:
+    branches: [ main ]  # Run when code is pushed to main branch
+  workflow_dispatch:    # Allow manual trigger from GitHub UI
+
+# 🔒 Environment variables (we'll set these in GitHub secrets)
+env:
+  LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}      # Your server IP
+  LIGHTSAIL_USER: ${{ secrets.LIGHTSAIL_USER }}      # Usually 'ubuntu'
+  LIGHTSAIL_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}    # Your SSH private key
+
+# 🏃‍♂️ JOBS - What tasks should GitHub Actions perform?
+jobs:
+  deploy:
+    name: Deploy to Lightsail Server
+    runs-on: ubuntu-latest  # Use Ubuntu server for this job
+    
+    steps:
+    # 📥 Step 1: Download your code from GitHub
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    # 🔐 Step 2: Setup SSH connection to your Lightsail server
+    - name: 🔐 Setup SSH
+      run: |
+        # Create SSH directory
+        mkdir -p ~/.ssh
+        
+        # Add your server's SSH key
+        echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/lightsail_key
+        chmod 600 ~/.ssh/lightsail_key
+        
+        # Add server to known hosts (prevents SSH warnings)
+        ssh-keyscan -H ${{ secrets.LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
+
+    # 🚀 Step 3: Deploy to your Lightsail server
+    - name: 🚀 Deploy PostgreSQL Container
+      run: |
+        # Connect to your server and run deployment commands
+        ssh -i ~/.ssh/lightsail_key ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
+          
+          # Navigate to project directory (create if doesn't exist)
+          cd /home/ubuntu/forewarn-ibf-portal || {
+            echo "📁 Creating project directory..."
+            mkdir -p /home/ubuntu/forewarn-ibf-portal
+            cd /home/ubuntu/forewarn-ibf-portal
+          }
+          
+          # 📥 Pull latest code from GitHub
+          echo "📥 Pulling latest code..."
+          if [ -d ".git" ]; then
+            git pull origin main
+          else
+            git clone https://github.com/afnan2013/forewarn-ibf-portal.git .
+          fi
+          
+          # 🛑 Stop existing containers (if any)
+          echo "🛑 Stopping existing containers..."
+          docker-compose -f docker-compose.dev.yml down || true
+          
+          # 🚀 Start PostgreSQL container
+          echo "🚀 Starting PostgreSQL container..."
+          docker-compose -f docker-compose.dev.yml up -d postgres
+          
+          # ✅ Check if container is running
+          echo "✅ Checking container status..."
+          docker-compose -f docker-compose.dev.yml ps
+          
+          # 📊 Show logs
+          echo "📊 Container logs:"
+          docker-compose -f docker-compose.dev.yml logs postgres --tail=20
+          
+        EOF
+
+    # 📧 Step 4: Notify about deployment status
+    - name: 📧 Deployment Complete
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📍 Server: ${{ secrets.LIGHTSAIL_HOST }}"
+        echo "🐘 PostgreSQL should be running on port 5432"
