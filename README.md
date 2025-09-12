@@ -109,37 +109,99 @@ Developer Push → GitHub → CI/CD Pipeline → Docker Registry → AWS EC2 →
    git push      Actions     Build Images    ECR/DockerHub   Pull    Auto Restart
 ```
 
-## 🚀 Development Roadmap
+## 🚀 Development Roadmap (Client RFP Requirements)
 
-### **Phase 1: Container Setup**
-- [ ] Frontend Dockerfile (Next.js)
-- [ ] Backend Dockerfile (Django)
-- [ ] Database container configuration
-- [ ] Docker Compose for local development
+### **✅ Phase 1: Foundation & Multi-Layered Access System** *(Deadline: December 2025)*
+- [x] Backend Dockerfile (Django) 
+- [x] Database container configuration (PostgreSQL)
+- [x] Docker Compose for local development
+- [x] Basic Django REST API foundation
+- [ ] **Multi-Layered RBAC Implementation:**
+  - [ ] Super Admin - Full control (assign policies, manage data, users)
+  - [ ] Admin - Data input capabilities (no policy assignment)
+  - [ ] Registered Viewer - View authorized materials only
+  - [ ] General Viewer - Public content access (no registration)
+- [ ] Email notification service (SMTP integration)
+- [ ] User authentication & permission system enhancement
 
-### **Phase 2: Service Development**
-- [ ] Django REST API development
-- [ ] Next.js frontend integration
-- [ ] PostgreSQL schema and migrations
-- [ ] Inter-container communication
+### **Phase 2: AI-Powered Crisis Management Dashboards** *(Deadline: January 2026)*
+- [ ] **Dynamic Crisis Dashboard:**
+  - [ ] AI-based data scraping (twice daily automation)
+  - [ ] Geo-tagged crisis events display (10-15 attributes)
+  - [ ] Admin validation workflow
+  - [ ] Visual alert indicators (3-day blinking alerts)
+  - [ ] Real-time data ingestion pipeline
+- [ ] **Dynamic Tracking Dashboard:**
+  - [ ] Early action plans tracking
+  - [ ] Fund utilization monitoring
+  - [ ] Activity status pipeline (planned → in-progress → completed)
+  - [ ] Advanced filtering (year, type, sector)
+  - [ ] Central data repository
 
-### **Phase 3: AWS Infrastructure**
-- [ ] EC2 instance setup and configuration
-- [ ] Security groups and networking
-- [ ] Domain and SSL certificate setup
-- [ ] Load balancer configuration
+### **Phase 3: Cyclone Predictive Models Integration** *(Deadline: November 2025)*
+- [ ] **Cyclone Track Predictive Tool:**
+  - [ ] Web-enabled track forecasting
+  - [ ] Impact calculation engine
+  - [ ] Guideline generation system
+  - [ ] Input/output workflow automation
+  - [ ] Downloadable results (maps, reports)
+- [ ] **Cyclone Classifier Model:**
+  - [ ] Fully automated web execution
+  - [ ] Simplified input interface
+  - [ ] Real-time impact calculation
+  - [ ] GIS map generation & visualization
+  - [ ] Multi-format downloads (Excel, PDF, Maps)
+  - [ ] IWFM BUET collaboration integration
 
-### **Phase 4: CI/CD Pipeline**
-- [ ] GitHub Actions workflow setup
-- [ ] Docker image building and pushing
-- [ ] Automated deployment to EC2
-- [ ] Health checks and rollback mechanisms
+### **Phase 4: Infrastructure & Performance** *(Ongoing)*
+- [ ] **Scalability & Performance:**
+  - [ ] Standard-2X Heroku equivalent compute power
+  - [ ] High-availability architecture design
+  - [ ] Real-time model execution optimization
+  - [ ] Cost-efficient hosting migration
+- [ ] **Data Management:**
+  - [ ] Automated online backup system
+  - [ ] Offline backup capabilities
+  - [ ] Manual save options
+  - [ ] Disaster recovery procedures
 
-### **Phase 5: Production Optimization**
-- [ ] Container monitoring and logging
-- [ ] Database backup automation
-- [ ] Performance optimization
-- [ ] Security hardening
+### **Phase 5: User Experience & Accessibility** *(Deadline: January 2026)*
+- [ ] **Mobile-First Design:**
+  - [ ] Responsive, low-bandwidth optimized UI
+  - [ ] Progressive Web App (PWA) capabilities
+  - [ ] Offline functionality for critical features
+- [ ] **Multi-Language Support:**
+  - [ ] i18n framework implementation
+  - [ ] Bengali and English language support
+  - [ ] RTL text support preparation
+- [ ] **AI Chatbot Integration:**
+  - [ ] Location-specific guidance system
+  - [ ] Natural language processing
+  - [ ] Crisis response recommendations
+- [ ] **Report Generation:**
+  - [ ] Automated map generation
+  - [ ] Data table exports
+  - [ ] PDF report compilation
+  - [ ] Batch download capabilities
+
+### **Phase 6: Final Integration & Handover** *(Deadline: February 2026)*
+- [ ] **System Integration:**
+  - [ ] End-to-end testing of all components
+  - [ ] Performance optimization
+  - [ ] Security hardening & vulnerability assessment
+  - [ ] Load testing for concurrent users
+- [ ] **Documentation & Handover:**
+  - [ ] Complete source code documentation
+  - [ ] Database schema documentation
+  - [ ] API documentation (OpenAPI/Swagger)
+  - [ ] Deployment & maintenance guides
+  - [ ] Admin user training materials
+  - [ ] Access credentials transfer to Start Bangladesh CARF
+- [ ] **Quality Assurance:**
+  - [ ] User acceptance testing
+  - [ ] Performance benchmarking
+  - [ ] Security audit completion
+  - [ ] Maintainability assessment
 
 ## 📁 Project Structure
 
