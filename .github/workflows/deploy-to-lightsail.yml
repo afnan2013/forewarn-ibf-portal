@@ -74,7 +74,7 @@ jobs:
           
           # 📊 Show logs
           echo "📊 Container logs:"
-          docker-compose -f docker-compose.dev.yml logs postgres --tail=20
+          docker-compose -f docker-compose.dev.yml logs --tail=20 postgres
           
         EOF
 
