@@ -14,6 +14,11 @@ env:
   LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}      # Your server IP
   LIGHTSAIL_USER: ${{ secrets.LIGHTSAIL_USER }}      # Usually 'ubuntu'
   LIGHTSAIL_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}    # Your SSH private key
+  
+  # 🗄️ Database credentials
+  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
 # 🏃‍♂️ JOBS - What tasks should GitHub Actions perform?
 jobs:
@@ -41,6 +46,11 @@ jobs:
 
     # 🚀 Step 3: Deploy to your Lightsail server
     - name: 🚀 Deploy PostgreSQL Container
+      env:
+        # Pass database credentials to the deployment
+        POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       run: |
         # Connect to your server and run deployment commands
         ssh -i ~/.ssh/lightsail_key ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
@@ -59,6 +69,12 @@ jobs:
           else
             git clone https://github.com/afnan2013/forewarn-ibf-portal.git .
           fi
+          
+          # 🔐 Create .env file with database credentials
+          echo "🔐 Setting up environment variables..."
+          echo "POSTGRES_DB=${POSTGRES_DB}" > .env
+          echo "POSTGRES_USER=${POSTGRES_USER}" >> .env
+          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" >> .env
           
           # 🛑 Stop existing containers (if any)
           echo "🛑 Stopping existing containers..."
