@@ -4,7 +4,6 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from apps.users.models import Role
 
 User = get_user_model()
 
@@ -24,8 +23,8 @@ def user_profile(request):
         'is_staff': user.is_staff,
         'is_active': user.is_active,
         'date_joined': user.date_joined,
-        'roles': [{'id': role.id, 'name': role.name, 'description': role.description} 
-                 for role in user.roles.all()]
+        # 'roles': [{'id': role.id, 'name': role.name, 'description': role.description} 
+                #  for role in user.roles.all()]
     }
     
     return Response(profile_data, status=status.HTTP_200_OK)

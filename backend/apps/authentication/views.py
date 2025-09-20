@@ -38,7 +38,7 @@ def login_view(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'is_staff': user.is_staff,
-                'roles': [role.name for role in user.roles.all()]
+                # 'roles': [role.name for role in user.roles.all()]
             }
         })
     else:
@@ -58,7 +58,8 @@ def register_view(request):
     password = request.data.get('password')
     first_name = request.data.get('first_name', '')
     last_name = request.data.get('last_name', '')
-    
+    username = request.data.get('username', '')
+
     if not email or not password:
         return Response(
             {'error': 'Email and password are required'}, 
@@ -76,7 +77,8 @@ def register_view(request):
             email=email,
             password=password,
             first_name=first_name,
-            last_name=last_name
+            last_name=last_name,
+            username=username,
         )
         
         refresh = RefreshToken.for_user(user)
@@ -88,17 +90,17 @@ def register_view(request):
                 'email': user.email,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'is_staff': user.is_staff,
-                'roles': [role.name for role in user.roles.all()]
+                # 'is_staff': user.is_staff,
+                # 'roles': [role.name for role in user.roles.all()]
             }
         }, status=status.HTTP_201_CREATED)
     
     except Exception as e:
+        print(e)
         return Response(
             {'error': 'Failed to create user'}, 
             status=status.HTTP_400_BAD_REQUEST
         )
-
 
 @api_view(['POST'])
 def logout_view(request):
