@@ -52,7 +52,8 @@ def login_view(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
+@permission_required(['auth.add_user'], raise_exception=True)
 def register_view(request):
     """
     User registration endpoint
@@ -62,6 +63,7 @@ def register_view(request):
     first_name = request.data.get('first_name', '')
     last_name = request.data.get('last_name', '')
     username = request.data.get('username', '')
+    group_ids = request.data.get('group_ids', [])
 
     if not email or not password:
         return Response(
@@ -76,27 +78,29 @@ def register_view(request):
         )
     
     try:
-        user = User.objects.create_user(
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            username=username,
-        )
-        
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': {
-                'id': str(user.id),
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                # 'is_staff': user.is_staff,
-                # 'roles': [role.name for role in user.roles.all()]
-            }
-        }, status=status.HTTP_201_CREATED)
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                username=username,
+            )
+            
+
+            if group_ids:
+                groups = Group.objects.filter(id__in=group_ids)
+                user.groups.set(groups)
+                
+            return Response({
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'groups': [{'id': group.id, 'name': group.name} for group in user.groups.all()]
+                }
+            }, status=status.HTTP_201_CREATED)
     
     except Exception as e:
         print(e)
@@ -119,7 +123,7 @@ def logout_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@permission_required(['auth.view_permission', 'auth.add_permission'], raise_exception=True)
+@permission_required(['auth.add_group'], raise_exception=True)
 def get_frontend_permissions(request):
     # Define which content types to show in frontend
     allowed_content_types = ['user', 'group']
@@ -147,17 +151,12 @@ def get_frontend_permissions(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@permission_required(['auth.add_group'], raise_exception=True)
 def create_group(request):
     """
     Create a new group with permissions
     Expected payload: {'name': 'group_name', 'permission_ids': [1, 2, 3]}
     """
-    # Check if user has permission to add groups
-    if not request.user.has_perm('auth.add_group'):
-        return Response(
-            {'error': 'You do not have permission to create groups'}, 
-            status=status.HTTP_403_FORBIDDEN
-        )
     
     group_name = request.data.get('name')
     permission_ids = request.data.get('permission_ids', [])
@@ -212,6 +211,7 @@ def create_group(request):
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
+@permission_required(['auth.update_group'], raise_exception=True)
 def update_group(request, group_id):
     """
     Update group and attach/detach permissions
@@ -273,6 +273,7 @@ def update_group(request, group_id):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
+@permission_required(['auth.delete_group'], raise_exception=True)
 def delete_group(request, group_id):
     """
     Delete a group

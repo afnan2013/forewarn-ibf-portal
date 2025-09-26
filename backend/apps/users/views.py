@@ -23,8 +23,8 @@ def user_profile(request):
         'is_staff': user.is_staff,
         'is_active': user.is_active,
         'date_joined': user.date_joined,
-        # 'roles': [{'id': role.id, 'name': role.name, 'description': role.description} 
-                #  for role in user.roles.all()]
+        'groups': [{'id': group.id, 'name': group.name} 
+                for group in user.groups.all()]
     }
     
     return Response(profile_data, status=status.HTTP_200_OK)
@@ -48,7 +48,8 @@ def list_users(request):
             'is_staff': user.is_staff,
             'is_active': user.is_active,
             'date_joined': user.date_joined,
-            'roles': [role.name for role in user.roles.all()]
+            'groups': [{'id': group.id, 'name': group.name} 
+                for group in user.groups.all()]
         })
     
     return Response(users_data, status=status.HTTP_200_OK)
