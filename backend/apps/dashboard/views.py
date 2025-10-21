@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from apps.core.responses import APIResponse
 
 
 @api_view(['GET'])
@@ -19,7 +20,10 @@ def dashboard_stats(request):
         'system_status': 'operational'
     }
     
-    return Response(stats, status=status.HTTP_200_OK)
+    return APIResponse.success(
+        data=stats, 
+        message='Dashboard statistics retrieved successfully'
+    )
 
 
 @api_view(['GET'])
@@ -35,10 +39,13 @@ def dashboard_overview(request):
             'email': request.user.email,
             'first_name': request.user.first_name,
             'last_name': request.user.last_name,
-            'roles': [role.name for role in request.user.roles.all()]
+            'groups': [group.name for group in request.user.groups.all()]
         },
-        'permissions': [],
+        'permissions': list(request.user.get_all_permissions()),
         'recent_actions': []
     }
     
-    return Response(overview, status=status.HTTP_200_OK)
+    return APIResponse.success(
+        data=overview, 
+        message='Dashboard overview retrieved successfully'
+    )

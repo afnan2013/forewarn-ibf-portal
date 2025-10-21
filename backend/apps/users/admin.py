@@ -43,10 +43,10 @@ class UserAdmin(BaseUserAdmin):
     """Admin interface for custom User model"""
     
     # Fields to display in the user list
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'isPasswordChanged', 'isDeleted', 'date_joined')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'is_password_changed', 'is_deleted', 'date_joined')
     
     # Fields to filter by
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'isPasswordChanged', 'isDeleted', 'date_joined', 'groups')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'is_password_changed', 'is_deleted', 'date_joined', 'groups')
     
     # Fields to search
     search_fields = ('username', 'first_name', 'last_name', 'email')
@@ -57,14 +57,14 @@ class UserAdmin(BaseUserAdmin):
     # Add your custom fields to the fieldsets
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Custom Fields', {
-            'fields': ('isPasswordChanged', 'isDeleted'),
+            'fields': ('is_password_changed', 'is_deleted'),
         }),
     )
     
     # Add custom fields to the add form
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ('Custom Fields', {
-            'fields': ('isPasswordChanged', 'isDeleted'),
+            'fields': ('is_password_changed', 'is_deleted'),
         }),
     )
 

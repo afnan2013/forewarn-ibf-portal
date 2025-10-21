@@ -1,224 +1,240 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import permission_required
 from django.shortcuts import get_object_or_404
+from apps.core.responses import APIResponse
+from .serializers import (
+    UserProfileSerializer, 
+    UserListSerializer, 
+    UserUpdateSerializer,
+    AdminUserUpdateSerializer,
+    ChangePasswordSerializer,
+    UserActivationSerializer,
+    UserDetailSerializer
+)
+from .permissions import (
+    HasUserViewPermission,
+    HasUserChangePermission, 
+    HasUserDeletePermission,
+    CannotModifySuperuser,
+)
 
 User = get_user_model()
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_profile(request):
+
+class UserProfileView(generics.RetrieveAPIView):
     """
     Get current user profile
     """
-    user = request.user
-    profile_data = {
-        'id': str(user.id),
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'is_staff': user.is_staff,
-        'is_active': user.is_active,
-        'date_joined': user.date_joined,
-        'groups': [{'id': group.id, 'name': group.name} 
-                for group in user.groups.all()]
-    }
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self):
+        return self.request.user
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return APIResponse.success(
+            data=serializer.data, 
+            message='User profile retrieved successfully'
+        )
 
-    return Response({'success': True, 'profile': profile_data}, status=status.HTTP_200_OK)
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@permission_required(['users.view_user'], raise_exception=True)
-def list_users(request):
+class UserListView(generics.ListAPIView):
     """
     List all users (admin only)
     """
-    users = User.objects.all().select_related()
-    users_data = []
+    serializer_class = UserListSerializer
+    permission_classes = [IsAuthenticated, HasUserViewPermission]
     
-    for user in users:
-        users_data.append({
-            'id': str(user.id),
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'is_staff': user.is_staff,
-            'is_active': user.is_active,
-            'date_joined': user.date_joined,
-            'groups': [{'id': group.id, 'name': group.name} 
-                for group in user.groups.all()]
-        })
+    def get_queryset(self):
+        return User.objects.filter(is_deleted=False).select_related().prefetch_related('groups')
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return APIResponse.success(
+            data={
+                'users': serializer.data,
+                'count': queryset.count()
+            },
+            message='Users retrieved successfully'
+        )
 
-    return Response({'success': True, 'users': users_data, 'count': len(users_data)}, status=status.HTTP_200_OK)
 
-
-@api_view(["PUT", "PATCH"])
-@permission_classes([IsAuthenticated])
-def update_user_profile(request):
+class UserProfileUpdateView(generics.UpdateAPIView):
     """
     Authenticated user can update their own profile: email, username, first_name, last_name
     """
-    user = request.user
-    data = request.data
+    serializer_class = UserUpdateSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self):
+        return self.request.user
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return APIResponse.success(
+                data=serializer.data,
+                message='User profile updated successfully'
+            )
+        else:
+            return APIResponse.validation_error(
+                message='Validation failed',
+                errors=serializer.errors
+            )
 
-    email = data.get('email')
-    username = data.get('username')
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
 
-    if email and email != user.email:
-        if user.__class__.objects.filter(email=email).exclude(pk=user.pk).exists():
-            return Response({'error': 'Email already in use.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.email = email
-
-    if username and username != user.username:
-        if user.__class__.objects.filter(username=username).exclude(pk=user.pk).exists():
-            return Response({'error': 'Username already in use.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.username = username
-
-    if first_name is not None:
-        user.first_name = first_name
-
-    if last_name is not None:
-        user.last_name = last_name
-
-    user.save()
-
-    return Response({
-        'success': True,
-        'user': {
-            'id': user.id,
-            'email': user.email,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-        }
-    }, status=status.HTTP_200_OK)
-
-@api_view(["DELETE"])
-@permission_classes([IsAuthenticated])
-@permission_required(['users.delete_user'], raise_exception=True)
-def delete_user(request, user_id):
+class UserDeleteView(generics.DestroyAPIView):
     """
     Admin endpoint to delete a user by user_id
     """
-    user = get_object_or_404(User, pk=user_id)
-    if user.is_superuser:
-        return Response({'error': 'Cannot delete superuser.'}, status=status.HTTP_403_FORBIDDEN)
-    user.delete()
-    return Response({'success': True, 'message': f'User {user_id} deleted.'}, status=status.HTTP_200_OK)
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated, HasUserDeletePermission, CannotModifySuperuser]
+    lookup_url_kwarg = 'user_id'
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_superuser:
+            return APIResponse.forbidden(message='Cannot delete superuser')
+        
+        user_id = instance.id
+        instance.delete()
+        return APIResponse.success(message=f'User {user_id} deleted successfully')
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@permission_required(['users.change_user'], raise_exception=True)
-def activate_user(request, user_id):
+
+class UserActivateView(APIView):
     """
     Admin endpoint to activate a user (set is_active=True)
     """
-    user = get_object_or_404(User, pk=user_id)
-    if user.is_superuser:
-        return Response({'error': 'Cannot activate superuser.'}, status=status.HTTP_403_FORBIDDEN)
-    if user.is_active:
-        return Response({'error': 'User is already active.'}, status=status.HTTP_400_BAD_REQUEST)
-    user.is_active = True
-    user.save()
-    return Response({'success': True, 'message': f'User {user_id} activated.'}, status=status.HTTP_200_OK)
+    permission_classes = [IsAuthenticated, HasUserChangePermission]
+    
+    def post(self, request, user_id):
+        user = get_object_or_404(User, pk=user_id)
+        
+        # Validate with serializer
+        serializer = UserActivationSerializer(
+            data={}, 
+            context={'user': user, 'action': 'activate'}
+        )
+        
+        if not serializer.is_valid():
+            return APIResponse.validation_error(
+                message='Validation failed',
+                errors=serializer.errors
+            )
+        
+        if user.is_active:
+            return APIResponse.error(message='User is already active')
+        
+        user.is_active = True
+        user.save()
+        return APIResponse.success(message=f'User {user_id} activated successfully')
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@permission_required(['users.change_user'], raise_exception=True)
-def deactivate_user(request, user_id):
+
+class UserDeactivateView(APIView):
     """
     Admin endpoint to deactivate a user (set is_active=False)
     """
-    user = get_object_or_404(User, pk=user_id)
-    if user.is_superuser:
-        return Response({'error': 'Cannot deactivate superuser.'}, status=status.HTTP_403_FORBIDDEN)
-    if not user.is_active:
-        return Response({'error': 'User is already deactivated.'}, status=status.HTTP_400_BAD_REQUEST)
-    user.is_active = False
-    user.save()
-    return Response({'success': True, 'message': f'User {user_id} deactivated.'}, status=status.HTTP_200_OK)
+    permission_classes = [IsAuthenticated, HasUserChangePermission]
+    
+    def post(self, request, user_id):
+        user = get_object_or_404(User, pk=user_id)
+        
+        # Validate with serializer
+        serializer = UserActivationSerializer(
+            data={}, 
+            context={'user': user, 'action': 'deactivate'}
+        )
+        
+        if not serializer.is_valid():
+            return APIResponse.validation_error(
+                message='Validation failed',
+                errors=serializer.errors
+            )
+        
+        if not user.is_active:
+            return APIResponse.error(message='User is already deactivated')
+        
+        user.is_active = False
+        user.save()
+        return APIResponse.success(message=f'User {user_id} deactivated successfully')
 
 
-@api_view(["PUT", "PATCH"])
-@permission_classes([IsAuthenticated])
-@permission_required(['users.change_user'], raise_exception=True)
-def update_user_by_admin(request, user_id):
+class AdminUserUpdateView(generics.UpdateAPIView):
     """
     Admin endpoint to update any user's profile fields (email, username, first_name, last_name, groups)
     """
-    user = get_object_or_404(User, pk=user_id)
-    if user.is_superuser:
-        return Response({'error': 'Cannot update superuser.'}, status=status.HTTP_403_FORBIDDEN)
+    serializer_class = AdminUserUpdateSerializer
+    permission_classes = [IsAuthenticated, HasUserChangePermission, CannotModifySuperuser]
+    queryset = User.objects.all()
+    lookup_url_kwarg = 'user_id'
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        
+        if serializer.is_valid():
+            updated_user = serializer.save()
+            # Use UserDetailSerializer for response
+            response_serializer = UserDetailSerializer(updated_user)
+            return APIResponse.success(
+                data={'user': response_serializer.data},
+                message='User updated successfully'
+            )
+        else:
+            return APIResponse.validation_error(
+                message='Validation failed',
+                errors=serializer.errors
+            )
 
-    data = request.data
-    email = data.get('email')
-    username = data.get('username')
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
-    groups = data.get('groups')
 
-    if email and email != user.email:
-        if User.objects.filter(email=email).exclude(pk=user.pk).exists():
-            return Response({'error': 'Email already in use.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.email = email
-
-    if username and username != user.username:
-        if User.objects.filter(username=username).exclude(pk=user.pk).exists():
-            return Response({'error': 'Username already in use.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.username = username
-
-    if first_name is not None:
-        user.first_name = first_name
-
-    if last_name is not None:
-        user.last_name = last_name
-
-    user.save()
-
-    if groups is not None:
-        from django.contrib.auth.models import Group
-        try:
-            group_objs = Group.objects.filter(id__in=groups)
-            if len(groups) != group_objs.count():
-                return Response({'error': 'One or more group IDs are invalid.'}, status=status.HTTP_400_BAD_REQUEST)
-            user.groups.set(group_objs)
-        except Exception as e:
-            return Response({'error': f'Failed to update groups: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-
-    return Response({
-        'success': True,
-        'user': {
-            'id': user.id,
-            'email': user.email,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'groups': [{'id': group.id, 'name': group.name} for group in user.groups.all()]
-        }
-    }, status=status.HTTP_200_OK)
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@permission_required(['users.change_user'], raise_exception=True)
-def change_password_by_admin(request, user_id):
+class ChangePasswordByAdminView(APIView):
     """
     Admin endpoint to change any user's password
     """
-    user = get_object_or_404(User, pk=user_id)
-    if user.is_superuser:
-        return Response({'error': 'Cannot change password for superuser.'}, status=status.HTTP_403_FORBIDDEN)
+    permission_classes = [IsAuthenticated, HasUserChangePermission]
+    
+    def post(self, request, user_id):
+        user = get_object_or_404(User, pk=user_id)
+        
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'user': user}
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return APIResponse.success(message=f'Password changed for user {user_id}')
+        else:
+            return APIResponse.validation_error(
+                message='Validation failed',
+                errors=serializer.errors
+            )
 
-    new_password = request.data.get('new_password')
-    if not new_password:
-        return Response({'error': 'New password is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user.set_password(new_password)
-    user.save()
-
-    return Response({'success': True, 'message': f'Password changed for user {user_id}.'}, status=status.HTTP_200_OK)
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    Get detailed user information (admin only)
+    """
+    serializer_class = UserDetailSerializer
+    permission_classes = [IsAuthenticated, HasUserViewPermission]
+    queryset = User.objects.all().prefetch_related('groups')
+    lookup_url_kwarg = 'user_id'
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return APIResponse.success(
+            data=serializer.data,
+            message='User details retrieved successfully'
+        )

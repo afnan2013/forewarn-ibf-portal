@@ -2,20 +2,21 @@ from django.urls import path
 from . import views
 
 # User management URLs
-# These handle user CRUD operations
+# These handle user CRUD operations using Class-Based Views
 
 app_name = 'users'
 
 urlpatterns = [
-    # User endpoints
-    path('profile/', views.user_profile, name='profile'),
-    path('profile/update/', views.update_user_profile, name='update_profile'),
+    # User profile endpoints
+    path('profile/', views.UserProfileView.as_view(), name='profile'),
+    path('profile/update/', views.UserProfileUpdateView.as_view(), name='update_profile'),
     
-    # # Admin Endpoints
-    path('list/', views.list_users, name='list'),
-    path('<int:user_id>/delete/', views.delete_user, name='delete_user'),
-    path('<int:user_id>/deactivate/', views.deactivate_user, name='deactivate_user'),
-    path('<int:user_id>/activate/', views.activate_user, name='activate_user'),
-    path('<int:user_id>/update/', views.update_user_by_admin, name='update_user_by_admin'),
-    path('<int:user_id>/change-password/', views.change_password_by_admin, name='change_password_by_admin'),
+    # Admin user management endpoints
+    path('list/', views.UserListView.as_view(), name='list'),
+    path('<int:user_id>/', views.UserDetailView.as_view(), name='user_detail'),
+    path('<int:user_id>/delete/', views.UserDeleteView.as_view(), name='delete_user'),
+    path('<int:user_id>/deactivate/', views.UserDeactivateView.as_view(), name='deactivate_user'),
+    path('<int:user_id>/activate/', views.UserActivateView.as_view(), name='activate_user'),
+    path('<int:user_id>/update/', views.AdminUserUpdateView.as_view(), name='update_user_by_admin'),
+    path('<int:user_id>/change-password/', views.ChangePasswordByAdminView.as_view(), name='change_password_by_admin'),
 ]

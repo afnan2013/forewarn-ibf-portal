@@ -11,6 +11,7 @@ from django.contrib.auth.models import Group, Permission
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from apps.core.responses import APIResponse
 
 User = get_user_model()
 
@@ -25,18 +26,17 @@ def login_view(request):
     password = request.data.get('password')
     
     if not username or not password:
-        return Response(
-            {'error': 'Username and password are required'}, 
-            status=status.HTTP_400_BAD_REQUEST
+        return APIResponse.validation_error(
+            errors={'username': 'Username is required', 'password': 'Password is required'},
+            message='Username and password are required'
         )
     
     user = authenticate(request, username=username, password=password)
     
     if user is not None:
         refresh = RefreshToken.for_user(user)
-        return Response({
-            # 'refresh': str(refresh),
-            'access': str(refresh.access_token),
+        user_data = {
+            'access_token': str(refresh.access_token),
             'user': {
                 'id': str(user.id),
                 'email': user.email,
@@ -44,14 +44,12 @@ def login_view(request):
                 'last_name': user.last_name,
                 'is_staff': user.is_staff,
                 'permissions': sorted(user.get_all_permissions()),
-                'group': [group.name for group in user.groups.all()]
+                'groups': [group.name for group in user.groups.all()]
             }
-        })
+        }
+        return APIResponse.success(data=user_data, message='Login successful')
     else:
-        return Response(
-            {'error': 'Invalid credentials'}, 
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+        return APIResponse.unauthorized(message='Invalid credentials')
 
 
 @api_view(['POST'])
@@ -68,23 +66,23 @@ def register_view(request):
     username = request.data.get('username', '')
     group_ids = request.data.get('group_ids', [])
 
-    if not email or not password:
-        return Response(
-            {'error': 'Email and password are required'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    # Validation
+    errors = {}
+    if not email:
+        errors['email'] = 'Email is required'
+    if not password:
+        errors['password'] = 'Password is required'
+    if not username:
+        errors['username'] = 'Username is required'
+        
+    if errors:
+        return APIResponse.validation_error(errors=errors)
     
     if User.objects.filter(email=email).exists():
-        return Response(
-            {'error': 'User with this email already exists'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return APIResponse.error(message='User with this email already exists')
 
     if User.objects.filter(username=username).exists():
-        return Response(
-            {'error': 'User with this username already exists'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return APIResponse.error(message='User with this username already exists')
     
     try:
         with transaction.atomic():
@@ -101,32 +99,25 @@ def register_view(request):
                 groups = Group.objects.filter(id__in=group_ids)
                 user.groups.set(groups)
                 
-            return Response({
-                'user': {
-                    'id': str(user.id),
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'groups': [{'id': group.id, 'name': group.name} for group in user.groups.all()]
-                }
-            }, status=status.HTTP_201_CREATED)
+            user_data = {
+                'id': str(user.id),
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'username': user.username,
+                'groups': [{'id': group.id, 'name': group.name} for group in user.groups.all()]
+            }
+            return APIResponse.created(data=user_data, message='User created successfully')
     
     except Exception as e:
-        print(e)
-        return Response(
-            {'error': 'Failed to create user'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return APIResponse.error(message='Failed to create user', status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def logout_view(request):
     """
     User logout endpoint (for token blacklisting in future)
     """
-    return Response(
-        {'message': 'Successfully logged out'}, 
-        status=status.HTTP_200_OK
-    )
+    return APIResponse.success(message='Successfully logged out')
 
 
 
@@ -151,11 +142,10 @@ def get_frontend_permissions(request):
             'content_type': perm.content_type.name,
         })
     
-    return Response({
-        'success': True,
-        'permissions': permission_data,
-        'count': len(permission_data)
-    })
+    return APIResponse.success(
+        data={'permissions': permission_data, 'count': len(permission_data)},
+        message='Frontend permissions retrieved successfully'
+    )
 
 
 @api_view(['POST'])
@@ -172,17 +162,14 @@ def create_group(request):
     
     # Validate input
     if not group_name:
-        return Response(
-            {'error': 'Group name is required'}, 
-            status=status.HTTP_400_BAD_REQUEST
+        return APIResponse.validation_error(
+            errors={'name': 'Group name is required'},
+            message='Group name is required'
         )
     
     # Check if group already exists
     if Group.objects.filter(name=group_name).exists():
-        return Response(
-            {'error': 'Group with this name already exists'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return APIResponse.error(message='Group with this name already exists')
     
     try:
         with transaction.atomic():
@@ -194,27 +181,24 @@ def create_group(request):
                 permissions = Permission.objects.filter(id__in=permission_ids)
                 group.permissions.set(permissions)
             
-            return Response({
-                'success': True,
-                'message': 'Group created successfully',
-                'group': {
-                    'id': group.id,
-                    'name': group.name,
-                    'permissions': [
-                        {
-                            'id': perm.id,
-                            'name': perm.name,
-                            'codename': perm.codename
-                        }
-                        for perm in group.permissions.all()
-                    ]
-                }
-            }, status=status.HTTP_201_CREATED)
+            group_data = {
+                'id': group.id,
+                'name': group.name,
+                'permissions': [
+                    {
+                        'id': perm.id,
+                        'name': perm.name,
+                        'codename': perm.codename
+                    }
+                    for perm in group.permissions.all()
+                ]
+            }
+            return APIResponse.created(data=group_data, message='Group created successfully')
             
     except Exception as e:
-        return Response(
-            {'error': f'Failed to create group: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return APIResponse.error(
+            message='Failed to create group', 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -237,10 +221,7 @@ def update_group(request, group_id):
             if group_name and group_name != group.name:
                 # Check if new name already exists
                 if Group.objects.filter(name=group_name).exclude(id=group_id).exists():
-                    return Response(
-                        {'error': 'Group with this name already exists'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                    return APIResponse.error(message='Group with this name already exists')
                 group.name = group_name
                 group.save()
             
@@ -249,27 +230,24 @@ def update_group(request, group_id):
                 permissions = Permission.objects.filter(id__in=permission_ids)
                 group.permissions.set(permissions)
             
-            return Response({
-                'success': True,
-                'message': 'Group updated successfully',
-                'group': {
-                    'id': group.id,
-                    'name': group.name,
-                    'permissions': [
-                        {
-                            'id': perm.id,
-                            'name': perm.name,
-                            'codename': perm.codename
-                        }
-                        for perm in group.permissions.all()
-                    ]
-                }
-            })
+            group_data = {
+                'id': group.id,
+                'name': group.name,
+                'permissions': [
+                    {
+                        'id': perm.id,
+                        'name': perm.name,
+                        'codename': perm.codename
+                    }
+                    for perm in group.permissions.all()
+                ]
+            }
+            return APIResponse.success(data=group_data, message='Group updated successfully')
             
     except Exception as e:
-        return Response(
-            {'error': f'Failed to update group: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return APIResponse.error(
+            message='Failed to update group', 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -293,16 +271,15 @@ def delete_group(request, group_id):
         
         group.delete()
         
-        return Response({
-            'success': True,
-            'message': f'Group "{group_info["name"]}" deleted successfully',
-            'deleted_group': group_info
-        })
+        return APIResponse.success(
+            data=group_info, 
+            message=f'Group "{group_info["name"]}" deleted successfully'
+        )
         
     except Exception as e:
-        return Response(
-            {'error': f'Failed to delete group: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return APIResponse.error(
+            message='Failed to delete group', 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -332,11 +309,10 @@ def get_groups(request):
             ]
         })
     
-    return Response({
-        'success': True,
-        'groups': groups_data,
-        'count': len(groups_data)
-    })
+    return APIResponse.success(
+        data={'groups': groups_data, 'count': len(groups_data)},
+        message='Groups retrieved successfully'
+    )
 
 
 @api_view(['GET'])
@@ -349,43 +325,41 @@ def get_group_detail(request, group_id):
     try:
         group = get_object_or_404(Group, id=group_id)
         
-        return Response({
-            'success': True,
-            'group': {
-                'id': group.id,
-                'name': group.name,
-                'user_count': group.user_set.count(),
-                'users': [
-                    {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name
+        group_data = {
+            'id': group.id,
+            'name': group.name,
+            'user_count': group.user_set.count(),
+            'users': [
+                {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name
+                }
+                for user in group.user_set.all()
+            ],
+            'permissions': [
+                {
+                    'id': perm.id,
+                    'name': perm.name,
+                    'codename': perm.codename,
+                    'content_type': {
+                        'id': perm.content_type.id,
+                        'app_label': perm.content_type.app_label,
+                        'model': perm.content_type.model,
+                        'name': perm.content_type.name
                     }
-                    for user in group.user_set.all()
-                ],
-                'permissions': [
-                    {
-                        'id': perm.id,
-                        'name': perm.name,
-                        'codename': perm.codename,
-                        'content_type': {
-                            'id': perm.content_type.id,
-                            'app_label': perm.content_type.app_label,
-                            'model': perm.content_type.model,
-                            'name': perm.content_type.name
-                        }
-                    }
-                    for perm in group.permissions.all()
-                ]
-            }
-        })
+                }
+                for perm in group.permissions.all()
+            ]
+        }
+        return APIResponse.success(data=group_data, message='Group details retrieved successfully')
         
     except Exception as e:
-        return Response(
-            {'error': f'Failed to get group details: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return APIResponse.error(
+            message='Failed to get group details', 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @api_view(["POST"])
@@ -399,12 +373,18 @@ def change_password(request):
     new_password = request.data.get('new_password')
 
     if not old_password or not new_password:
-        return Response({'error': 'Old and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        return APIResponse.validation_error(
+            errors={'old_password': 'Required', 'new_password': 'Required'},
+            message='Old and new password are required'
+        )
 
     if not user.check_password(old_password):
-        return Response({'error': 'Old password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+        return APIResponse.validation_error(
+            errors={'old_password': 'Incorrect password'},
+            message='Old password is incorrect'
+        )
 
     user.set_password(new_password)
     user.save()
 
-    return Response({'success': True, 'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+    return APIResponse.success(message='Password changed successfully')
