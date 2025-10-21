@@ -1,6 +1,8 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import Permission
+from .models import User
 
 # Register ContentType for admin dashboard
 @admin.register(ContentType)
@@ -33,3 +35,36 @@ class PermissionAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         return False  # Don't allow deleting permissions
+
+
+# Register custom User model for admin dashboard
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    """Admin interface for custom User model"""
+    
+    # Fields to display in the user list
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'isPasswordChanged', 'isDeleted', 'date_joined')
+    
+    # Fields to filter by
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'isPasswordChanged', 'isDeleted', 'date_joined', 'groups')
+    
+    # Fields to search
+    search_fields = ('username', 'first_name', 'last_name', 'email')
+    
+    # Ordering
+    ordering = ('username',)
+    
+    # Add your custom fields to the fieldsets
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('Custom Fields', {
+            'fields': ('isPasswordChanged', 'isDeleted'),
+        }),
+    )
+    
+    # Add custom fields to the add form
+    add_fieldsets = BaseUserAdmin.add_fieldsets + (
+        ('Custom Fields', {
+            'fields': ('isPasswordChanged', 'isDeleted'),
+        }),
+    )
+

@@ -7,9 +7,12 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.models import User, Group, Permission
+from django.contrib.auth.models import Group, Permission
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 @api_view(['POST'])
@@ -18,16 +21,16 @@ def login_view(request):
     """
     User login endpoint
     """
-    email = request.data.get('email')
+    username = request.data.get('username')
     password = request.data.get('password')
     
-    if not email or not password:
+    if not username or not password:
         return Response(
-            {'error': 'Email and password are required'}, 
+            {'error': 'Username and password are required'}, 
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    user = authenticate(request, username=email, password=password)
+    user = authenticate(request, username=username, password=password)
     
     if user is not None:
         refresh = RefreshToken.for_user(user)
@@ -53,7 +56,7 @@ def login_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@permission_required(['auth.add_user'], raise_exception=True)
+@permission_required(['users.add_user'], raise_exception=True)
 def register_view(request):
     """
     User registration endpoint
@@ -74,6 +77,12 @@ def register_view(request):
     if User.objects.filter(email=email).exists():
         return Response(
             {'error': 'User with this email already exists'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {'error': 'User with this username already exists'}, 
             status=status.HTTP_400_BAD_REQUEST
         )
     
@@ -211,19 +220,12 @@ def create_group(request):
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
-@permission_required(['auth.update_group'], raise_exception=True)
+@permission_required(['auth.change_group'], raise_exception=True)
 def update_group(request, group_id):
     """
     Update group and attach/detach permissions
     Expected payload: {'name': 'new_name', 'permission_ids': [1, 2, 3]}
     """
-    # Check if user has permission to change groups
-    if not request.user.has_perm('auth.change_group'):
-        return Response(
-            {'error': 'You do not have permission to update groups'}, 
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
     try:
         group = get_object_or_404(Group, id=group_id)
         
@@ -278,13 +280,6 @@ def delete_group(request, group_id):
     """
     Delete a group
     """
-    # Check if user has permission to delete groups
-    if not request.user.has_perm('auth.delete_group'):
-        return Response(
-            {'error': 'You do not have permission to delete groups'}, 
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
     try:
         group = get_object_or_404(Group, id=group_id)
         
@@ -313,17 +308,11 @@ def delete_group(request, group_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@permission_required(['auth.view_group'], raise_exception=True)
 def get_groups(request):
     """
     Get all groups with their permissions
     """
-    # Check if user has permission to view groups
-    if not request.user.has_perm('auth.view_group'):
-        return Response(
-            {'error': 'You do not have permission to view groups'}, 
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
     groups = Group.objects.all().prefetch_related('permissions')
     
     groups_data = []
@@ -352,17 +341,11 @@ def get_groups(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@permission_required(['auth.view_group'], raise_exception=True)
 def get_group_detail(request, group_id):
     """
     Get detailed information about a specific group
     """
-    # Check if user has permission to view groups
-    if not request.user.has_perm('auth.view_group'):
-        return Response(
-            {'error': 'You do not have permission to view groups'}, 
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
     try:
         group = get_object_or_404(Group, id=group_id)
         
@@ -404,3 +387,24 @@ def get_group_detail(request, group_id):
             {'error': f'Failed to get group details: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Authenticated user can change their own password
+    """
+    user = request.user
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+
+    if not old_password or not new_password:
+        return Response({'error': 'Old and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user.check_password(old_password):
+        return Response({'error': 'Old password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+
+    return Response({'success': True, 'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
